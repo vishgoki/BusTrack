@@ -30,6 +30,8 @@ public class LoginActivity extends AppCompatActivity {
     EditText passwordTxt;
     @BindView(R.id.loginButton)
     Button loginButton;
+    @BindView(R.id.signupButton)
+    Button signupButton;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +49,13 @@ public class LoginActivity extends AppCompatActivity {
                 String password = passwordTxt.getText().toString().trim();
 
                 login(email, password);
+            }
+        });
+
+        signupButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
             }
         });
 
