@@ -8,6 +8,12 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.gms.maps.CameraUpdateFactory;
+import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.OnMapReadyCallback;
+import com.google.android.gms.maps.SupportMapFragment;
+import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.FirebaseAuth;
@@ -17,13 +23,14 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.vishwa.bustrack.Model.BusCoordinates;
 
 import java.util.HashMap;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends AppCompatActivity implements OnMapReadyCallback {
 
 
     private static final String TAG = "MainActivity";
@@ -41,11 +48,19 @@ public class MainActivity extends AppCompatActivity {
     @BindView(R.id.busNumber)
     TextView bNumber;
 
+    double busLat, busLong;
+    private GoogleMap mMap;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         ButterKnife.bind(this);
+
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager()
+                .findFragmentById(R.id.map);
+        mapFragment.getMapAsync(this);
 
         database = FirebaseDatabase.getInstance();
         databaseReference = database.getReference();
@@ -84,16 +99,44 @@ public class MainActivity extends AppCompatActivity {
     private void getBusdetails() {
 
 
-        databaseReference.child("bus").child(busNumber).addValueEventListener(new ValueEventListener() {
+            databaseReference.child("bus").child(busNumber).addValueEventListener(new ValueEventListener() {
             @Override
             public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
                 HashMap<String, Object> map = (HashMap<String, Object>) dataSnapshot.getValue();
 
                 driverName = map.get("busDriver").toString();
-                busNumber = map.get("busNumber").toString();
+                vehicleNumber = map.get("busNumber").toString();
 
                 dName.setText(driverName);
-                bNumber.setText(busNumber);
+                bNumber.setText(vehicleNumber);
+
+                getBusCoordinates();
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError databaseError) {
+
+            }
+        });
+
+    }
+
+    private void getBusCoordinates() {
+        Log.d(TAG, "onDataChange: busNumber : " + busNumber);
+
+        databaseReference.child("bus").child(busNumber).child("currentCoordinates").addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(@NonNull DataSnapshot dataSnapshot) {
+
+                BusCoordinates busCoordinates = dataSnapshot.getValue(BusCoordinates.class);
+
+                busLat = busCoordinates.getLatitude();
+                busLong = busCoordinates.getLongitude();
+
+                LatLng busLocation = new LatLng(busLat, busLong);
+                mMap.addMarker(new MarkerOptions().position(busLocation).title(busNumber));
+
+                Log.d(TAG, "onDataChange: LAT : " + busCoordinates.getLatitude() + ", " + busCoordinates.getLongitude());
             }
 
             @Override
@@ -133,4 +176,18 @@ public class MainActivity extends AppCompatActivity {
 
         finishAffinity();
     }
+
+    @Override
+    public void onMapReady(GoogleMap googleMap) {
+        mMap = googleMap;
+        LatLng currentLocation = new LatLng(12.937956, 77.694025); //Mock current location being my college
+
+
+
+        mMap.addMarker(new MarkerOptions().position(currentLocation).title("Current Location"));
+        mMap.moveCamera(CameraUpdateFactory.newLatLng(currentLocation));
+        mMap.setMinZoomPreference(12);
+        mMap.getUiSettings().setZoomGesturesEnabled(true);
+        mMap.getUiSettings().setZoomControlsEnabled(true);
+        mMap.getUiSettings().setTiltGesturesEnabled(true);    }
 }
